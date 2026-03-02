@@ -13,7 +13,7 @@
 # limitations under the License.
 
 # UNDO/REDO logic
-from keys import MAX_UNDO, INDENT_STR
+from config.keys import MAX_UNDO, INDENT_STR
 
 # Save current buffer state to undo stack - Call before any edit
 def save_snapshot(buffer, cursor, tab=None):

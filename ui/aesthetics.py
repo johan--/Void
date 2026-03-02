@@ -15,8 +15,8 @@
 import curses
 import time
 import os
-from keys import NEW_FILE_NAME
-from display import safe_addstr
+from config.keys import NEW_FILE_NAME
+from ui.display import safe_addstr
 
 # ──────────────────────────────────
 #  COLOR PAIR IDS FOR HUD

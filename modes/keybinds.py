@@ -13,16 +13,16 @@
 # limitations under the License.
 
 import curses
-from buffer import Buffer
-from vim_motions import handle_vim_motion, reset_pending
-from editing import auto_indent, save_snapshot
-from tab import Tab
-from search import search_state, search_prompt
-from splash import SplashScreen
-from visual import visual_state, visual_delete, visual_yank, visual_change, visual_indent
-from display import draw_status_bar
-from aesthetics import hud
-from keys import (KEY_ESCAPE, KEY_CTRL_T, KEY_CTRL_F, KEY_CTRL_V, KEY_CTRL_D,
+from core.buffer import Buffer
+from modes.vim_motions import handle_vim_motion, reset_pending
+from core.editing import auto_indent, save_snapshot
+from core.tab import Tab
+from modes.search import search_state, search_prompt
+from ui.splash import SplashScreen
+from modes.visual import visual_state, visual_delete, visual_yank, visual_change, visual_indent
+from ui.display import draw_status_bar
+from ui.aesthetics import hud
+from config.keys import (KEY_ESCAPE, KEY_CTRL_T, KEY_CTRL_F, KEY_CTRL_V, KEY_CTRL_D,
                   KEY_CTRL_U, KEY_ENTER, KEY_BACKSPACE_CODES, KEY_DELETE_CODES,
                   NEW_FILE_NAME)
 

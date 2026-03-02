@@ -16,8 +16,8 @@ import curses
 import subprocess
 import os
 import time
-from keys import TERMINAL_HEIGHT, SUBPROCESS_TIMEOUT, KEY_ESCAPE
-from display import safe_addstr
+from config.keys import TERMINAL_HEIGHT, SUBPROCESS_TIMEOUT, KEY_ESCAPE
+from ui.display import safe_addstr
 
 class InlineTerminal:
     def __init__(self, window):

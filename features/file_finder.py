@@ -14,8 +14,8 @@
 
 import os
 import curses
-from keys import FILE_FINDER_WIDTH, KEY_ESCAPE
-from display import safe_addstr
+from config.keys import FILE_FINDER_WIDTH, KEY_ESCAPE
+from ui.display import safe_addstr
 
 
 class FileFinder:
@@ -94,6 +94,11 @@ class FileFinder:
             result = self.select()
             if result:
                 return result
+        elif k == "h":
+            # Go back a directory
+            self.cwd = os.path.dirname(self.cwd)
+            self.refresh_files()
+
         elif k == ".":
             # Toggle hidden files (changed from 'h' to avoid vim conflict)
             self.show_hidden = not self.show_hidden
@@ -112,10 +117,10 @@ class FileFinder:
         header = " Files "
         short_cwd = os.path.basename(self.cwd) or self.cwd
         cwd_display = f" {short_cwd}/"
-        safe_addstr(stdscr, row_offset, start_col + 1, header[:self.width - 1], curses.A_BOLD)
-        safe_addstr(stdscr, row_offset + 1, start_col + 1, cwd_display[:self.width - 1], curses.A_DIM)
-
-        list_start = row_offset + 2
+        safe_addstr(stdscr, row_offset + 3, start_col + 1, header[:self.width - 1], curses.A_BOLD)
+        safe_addstr(stdscr, row_offset + 4, start_col + 1, cwd_display[:self.width - 1], curses.A_DIM)
+                                     # 0, and 1
+        list_start = row_offset + 5
         visible_rows = n_rows - 2
 
         if self.selected >= self.scroll_offset + visible_rows:

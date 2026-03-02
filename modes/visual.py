@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from editing import save_snapshot
+from core.editing import save_snapshot
 
 # ──────────────────────────────────
 #  VISUAL MODE STATE

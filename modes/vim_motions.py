@@ -12,9 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from editing import save_snapshot, undo, redo
-from search import search_state
-from keys import KEY_CTRL_D, KEY_CTRL_U, KEY_CTRL_R
+from core.editing import save_snapshot, undo, redo
+from modes.search import search_state
+from config.keys import KEY_CTRL_D, KEY_CTRL_U, KEY_CTRL_R
 
 # CLIPBOARD for yank/paste
 clipboard = []

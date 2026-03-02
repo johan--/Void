@@ -13,7 +13,7 @@
 # limitations under the License.
 
 import curses
-from keys import KEY_ESCAPE, KEY_BACKSPACE_CODES, KEY_ENTER
+from config.keys import KEY_ESCAPE, KEY_BACKSPACE_CODES, KEY_ENTER
 
 class SearchState:
     def __init__(self):

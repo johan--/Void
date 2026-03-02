@@ -17,7 +17,7 @@ import time
 import random
 import os
 import json
-from display import safe_addstr
+from ui.display import safe_addstr
 
 RECENT_FILES_PATH = os.path.expanduser("~/.void_recent_files.json")
 

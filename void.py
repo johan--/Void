@@ -14,20 +14,19 @@
 
 import curses
 import argparse
-from buffer import Buffer
-from keybinds import handle_keypress, EditorState, open_file_in_tab
-from display import (init_colors, detect_language, line_num_width, draw_line_number,
+from core.buffer import Buffer
+from modes.keybinds import handle_keypress, EditorState, open_file_in_tab
+from ui.display import (init_colors, detect_language, line_num_width, draw_line_number,
                      draw_line, draw_indent_guides, draw_tab_bar, draw_status_bar,
                      draw_search_highlights, draw_matching_pair, draw_visual_selection)
-from terminal import InlineTerminal
-from tab import Tab, TabManager
-from file_finder import FileFinder
-from search import search_state 
-from splash import SplashScreen
-from visual import visual_state
-from aesthetics import hud, init_hud_colors
-from keys import NEW_FILE_NAME
-
+from features.terminal import InlineTerminal
+from core.tab import Tab, TabManager
+from features.file_finder import FileFinder
+from modes.search import search_state 
+from ui.splash import SplashScreen
+from modes.visual import visual_state
+from ui.aesthetics import hud, init_hud_colors
+from config.keys import NEW_FILE_NAME
 
 # Viewing the buffer through a window 
 class Window:

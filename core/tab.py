@@ -13,7 +13,7 @@
 # limitations under the License.
 
 import os
-from keys import NEW_FILE_NAME
+from config.keys import NEW_FILE_NAME
 
 # Each tab holds its own buffer, cursor state, file, and editor state
 class Tab:
