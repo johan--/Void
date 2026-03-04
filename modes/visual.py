@@ -68,7 +68,7 @@ class VisualState:
 
 # Delete the selected region, works for all three visual modes
 def visual_delete(buffer, cursor, window, state, tab=None):
-    import vim_motions
+    import modes.vim_motions as vim_motions
     save_snapshot(buffer, cursor, tab)
     r = state.get_range(cursor)
 
@@ -115,7 +115,7 @@ def visual_delete(buffer, cursor, window, state, tab=None):
     return True
 
 def visual_yank(buffer, cursor, state):
-    import vim_motions
+    import modes.vim_motions as vim_motions
     r = state.get_range(cursor)
 
     if state.mode == "char":
@@ -155,7 +155,7 @@ def visual_change(buffer, cursor, window, state, tab=None):
 
 
 def visual_indent(buffer, cursor, state, direction=1, tab=None):
-    from keys import INDENT_STR
+    from config.keys import INDENT_STR
     save_snapshot(buffer, cursor, tab)
     r = state.get_range(cursor)
 

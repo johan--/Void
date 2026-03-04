@@ -89,7 +89,13 @@ def get_indent_level(line):
 
 def auto_indent(buffer, cursor, window):
     current_line = buffer[cursor.row]
-    indent = get_indent_level(current_line)
+    if cursor.col == 0:
+        # At start of line — just insert a blank line above, no indent
+        buffer.lines.insert(cursor.row, "")
+        cursor.row += 1
+        window.down(buffer, cursor)
+        return
+    indent = get_indent_level(current_line[:cursor.col])
     buffer.split(cursor)
     cursor.row += 1
     cursor.col = 0

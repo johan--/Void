@@ -14,7 +14,6 @@
 
 import curses
 
-
 # Safely write a string to the screen, suppressing curses boundary errors
 def safe_addstr(stdscr, row, col, text, attr=0):
     try:
@@ -51,14 +50,19 @@ COLOR_CURSOR_LINE = 17
 COLOR_VISUAL_SELECT = 18
 COLOR_INDENT_ACTIVE = 19
 COLOR_MATCH_PAIR = 20
+COLOR_MATCH_BOOL = 21  # NEW
 
 # LANGUAGE DEFINITIONS
 # each language maps file extensions to a dict of token patterns
 LANGUAGES = {
     "python": {
         "extensions": [".py"],
+        "boolean": [
+            "True", "False",
+        ],
+
         "keywords": [
-            "False", "None", "True", "and", "as", "assert", "async", "await",
+            "None", "and", "as", "assert", "async", "await",
             "break", "continue", "del", "elif", "else",
             "except", "finally", "for", "global", "if",
             "in", "is", "lambda", "nonlocal", "not", "or", "pass", "raise",
@@ -79,12 +83,15 @@ LANGUAGES = {
     },
     "c": {
         "extensions": [".c", ".h"],
+        "boolean": [
+            "true", "false",
+        ],
         "keywords": [
             "auto", "break", "case", "const", "continue", "default", "do",
             "else", "enum", "extern", "for", "goto", "if", "inline",
             "register", "restrict", "return", "sizeof", "static", "switch",
             "typedef", "union", "volatile", "while",
-            "NULL", "true", "false",
+            "NULL",
         ],
         "definitions": [
             "struct", "void", "int", "char", "float", "double", "long",
@@ -102,15 +109,19 @@ LANGUAGES = {
     },
     "cpp": {
         "extensions": [".cpp", ".cc", ".cxx", ".hpp", ".hxx", ".hh"],
+        "boolean": [
+            "true", "false",
+        ],
+
         "keywords": [
             "alignas", "alignof", "auto", "break", "case", "catch", "const",
             "constexpr", "continue", "decltype", "default", "delete", "do",
             "dynamic_cast", "else", "enum", "explicit", "export", "extern",
-            "false", "for", "friend", "goto", "if", "inline", "mutable",
+            "for", "friend", "goto", "if", "inline", "mutable",
             "new", "noexcept", "nullptr", "operator", "private", "protected",
             "public", "register", "reinterpret_cast", "return", "sizeof",
             "static", "static_assert", "static_cast", "switch", "template",
-            "this", "throw", "true", "try", "typedef", "typeid", "typename",
+            "this", "throw", "try", "typedef", "typeid", "typename",
             "union", "using", "virtual", "volatile", "while",
         ],
         "definitions": [
@@ -131,11 +142,15 @@ LANGUAGES = {
     },
     "rust": {
         "extensions": [".rs"],
+        "boolean": [
+            "true", "false",
+        ],
+
         "keywords": [
             "as", "async", "await", "break", "const", "continue", "crate",
-            "dyn", "else", "extern", "false", "for", "if", "in",
+            "dyn", "else", "extern", "for", "if", "in",
             "let", "loop", "match", "move", "mut", "pub", "ref",
-            "return", "self", "Self", "static", "super", "true",
+            "return", "self", "Self", "static", "super",
             "unsafe", "where", "while", "yield",
         ],
         "definitions": [
@@ -158,13 +173,16 @@ LANGUAGES = {
     },
     "javascript": {
         "extensions": [".js", ".jsx", ".mjs", ".cjs", ".ts", ".tsx"],
+        "boolean": [
+            "true", "false",
+        ],
         "keywords": [
             "await", "break", "case", "catch", "const", "continue",
             "debugger", "default", "delete", "do", "else", "export",
-            "extends", "false", "finally", "for", "if", "implements",
+            "extends", "finally", "for", "if", "implements",
             "import", "in", "instanceof", "interface", "let", "new", "null",
             "of", "package", "private", "protected", "public", "return",
-            "static", "super", "switch", "this", "throw", "true", "try",
+            "static", "super", "switch", "this", "throw", "try",
             "typeof", "undefined", "var", "void", "while", "with", "yield",
             "async",
         ],
@@ -237,7 +255,7 @@ def init_colors():
     curses.init_pair(COLOR_VISUAL_SELECT, curses.COLOR_BLACK, curses.COLOR_BLUE)
     curses.init_pair(COLOR_INDENT_ACTIVE, curses.COLOR_BLUE, -1)
     curses.init_pair(COLOR_MATCH_PAIR, BRIGHT_YELLOW, -1)
-
+    curses.init_pair(COLOR_MATCH_BOOL, curses.COLOR_YELLOW, -1) # NEW 
 
 # Draw the tab bar at the top of the screen
 def draw_tab_bar(stdscr, tab_manager, n_cols):
@@ -360,31 +378,81 @@ _NAME_FOLLOWS = {
     "def", "class", "fn", "function", "struct", "enum",
     "trait", "namespace", "mod", "type", "union",
 }
+# Parse an f-string body, returns [tokens/new_index]
+def _tokenize_fstring(line, i, quote):
+    tokens = [(quote, COLOR_STRING)]  # opening quote
+    j = i + 1
+    while j < len(line):
+        if line[j] == "\\" and j + 1 < len(line):
+            tokens.append((line[j:j+2], COLOR_STRING))
+            j += 2
+            continue
+        if line[j] == quote:
+            tokens.append((quote, COLOR_STRING))
+            j += 1
+            break
+        if line[j] == "{":
+            depth = 1
+            k = j + 1
+            while k < len(line) and depth > 0:
+                if line[k] == "{":
+                    depth += 1
+                elif line[k] == "}":
+                    depth -= 1
+                k += 1
+            tokens.append(("{", COLOR_KEYWORD))
+            tokens.append((line[j+1:k-1], COLOR_NORMAL))
+            tokens.append(("}", COLOR_KEYWORD))
+            j = k
+            continue
+        
+        str_start = j
+        
+        while j < len(line) and line[j] != quote and line[j] != "{" and line[j] != "\\":
+            j += 1
+        tokens.append((line[str_start:j], COLOR_STRING))
+    
+    return tokens, j
+
 
 # Break a line into (text, color_pair) chunks for syntax highlighting
 def tokenize_line(line, lang):
     if lang is None:
+        
         return [(line, COLOR_NORMAL)]
 
     config = LANGUAGES.get(lang)
+    
     if config is None:
+        
         return [(line, COLOR_NORMAL)]
 
     tokens = []
     i = 0
-
+    
+    # [COMMENTS] - everything from comment char to end of line
     while i < len(line):
-        # COMMENTS - everything from comment char to end of line
         if line[i:].startswith(config["comment"]):
             tokens.append((line[i:], COLOR_COMMENT))
             break
+      
+                # [F-STRING] 
+        if (line[i] == "f" and lang == "python"
+                and i + 1 < len(line) and line[i+1] in config["string_delimiters"]
+                and (i == 0 or not line[i-1].isalnum() and line[i-1] != "_")):
+            tokens.append(("f", COLOR_STRING))
+            i += 1
+            
+            continue
 
-        # STRINGS - handle both single and double quotes
+        # [STRINGS]
         if line[i] in config["string_delimiters"]:
             quote = line[i]
-            # check for triple quotes
+            is_fstring = (i > 0 and line[i-1] == "f" and lang == "python")
+
             if line[i:i+3] == quote * 3:
                 end = line.find(quote * 3, i + 3)
+                
                 if end == -1:
                     tokens.append((line[i:], COLOR_STRING))
                     break
@@ -393,20 +461,29 @@ def tokenize_line(line, lang):
                     i = end + 3
                     continue
             else:
-                j = i + 1
-                while j < len(line):
-                    if line[j] == "\\" and j + 1 < len(line):
-                        j += 2  # skip escaped char
-                        continue
-                    if line[j] == quote:
+                if not is_fstring:
+                    j = i + 1
+                    
+                    while j < len(line):
+                        if line[j] == "\\" and j + 1 < len(line):
+                            j += 2
+                            continue
+                        if line[j] == quote:
+                            j += 1
+                            
+                            break
                         j += 1
-                        break
-                    j += 1
-                tokens.append((line[i:j], COLOR_STRING))
-                i = j
-                continue
+                    tokens.append((line[i:j], COLOR_STRING))
+                    i = j
+                    
+                    continue
+                else:
+                    fstring_tokens, j = _tokenize_fstring(line, i, quote)
+                    tokens.extend(fstring_tokens)
+                    i = j
+                    continue
 
-        # DECORATORS / PREPROCESSOR DIRECTIVES
+        # [DECORATORS] / [PREPROCESSOR DIRECTIVES]
         if line[i] == "@" and (i == 0 or line[i-1] in " \t"):
             j = i + 1
             while j < len(line) and (line[j].isalnum() or line[j] in "_."):
@@ -422,7 +499,7 @@ def tokenize_line(line, lang):
             i = j
             continue
 
-        # NUMBERS
+        # [NUMBERS]
         if line[i].isdigit() and (i == 0 or not line[i-1].isalnum()):
             j = i
             while j < len(line) and (line[j].isdigit() or line[j] in ".xXoObB_abcdefABCDEF"):
@@ -431,7 +508,7 @@ def tokenize_line(line, lang):
             i = j
             continue
 
-        # WORDS - check for keywords, definitions, and builtins
+        # [WORDS] - check for keywords, definitions, and builtins
         if line[i].isalpha() or line[i] == "_":
             j = i
             while j < len(line) and (line[j].isalnum() or line[j] == "_"):
@@ -441,7 +518,8 @@ def tokenize_line(line, lang):
                 tokens.append((word, COLOR_KEYWORD))
             elif word in config.get("definitions", []):
                 tokens.append((word, COLOR_DEFINITION))
-                # color the name that follows naming keywords
+                
+                # this is for coloring the names after a class/function
                 if word in _NAME_FOLLOWS:
                     k = j
                     while k < len(line) and line[k] == " ":
@@ -455,9 +533,12 @@ def tokenize_line(line, lang):
                     j = k
             elif word in config["builtins"]:
                 tokens.append((word, COLOR_BUILTIN))
+            elif word in config["boolean"]:    # NEW 
+                tokens.append((word, COLOR_MATCH_BOOL))            
             else:
                 tokens.append((word, COLOR_NORMAL))
             i = j
+            
             continue
 
         # ANYTHING ELSE - single character

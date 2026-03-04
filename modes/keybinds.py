@@ -24,7 +24,7 @@ from ui.display import draw_status_bar
 from ui.aesthetics import hud
 from config.keys import (KEY_ESCAPE, KEY_CTRL_T, KEY_CTRL_F, KEY_CTRL_V, KEY_CTRL_D,
                   KEY_CTRL_U, KEY_ENTER, KEY_BACKSPACE_CODES, KEY_DELETE_CODES,
-                  NEW_FILE_NAME)
+                  NEW_FILE_NAME, INDENT_WIDTH)
 
 
 # ──────────────────────────────────
@@ -217,6 +217,7 @@ def handle_keypress(k, stdscr, window, buffer, cursor, filename, state, terminal
             state.finder_focused = True
         else:
             file_finder.visible = True
+            file_finder.refresh_files()
             state.finder_focused = True
         return
         
@@ -300,6 +301,7 @@ def handle_keypress(k, stdscr, window, buffer, cursor, filename, state, terminal
         elif k == "i":
             state.mode = "insert"
             state._insert_snapshot_saved = False
+            print("\033[6 q", end="", flush=True)
         elif k == "v":
             visual_state.start("char", cursor)
             state.mode = "visual"
@@ -335,13 +337,14 @@ def handle_keypress(k, stdscr, window, buffer, cursor, filename, state, terminal
                 state.mode = mode_change
                 if mode_change == "insert":
                     state._insert_snapshot_saved = False
-
+                    print("\033[6 q", end="", flush=True)
     # ──────────────────────────
     #  INSERT MODE (batched undo)
     # ──────────────────────────
     elif state.mode == "insert":
         if k == KEY_ESCAPE:
             state.mode = "normal"
+            print("\033[2 q", end="", flush=True)
         elif k == "KEY_UP":
             cursor.up(buffer)
             window.up(cursor)
@@ -368,14 +371,25 @@ def handle_keypress(k, stdscr, window, buffer, cursor, filename, state, terminal
                 state._insert_snapshot_saved = True
             buffer.delete(cursor)
             state.modified = True
+        
         elif k in KEY_BACKSPACE_CODES:
             if (cursor.row, cursor.col) > (0, 0):
                 if not state._insert_snapshot_saved:
                     save_snapshot(buffer, cursor, tab)
                     state._insert_snapshot_saved = True
-                left(window, buffer, cursor)
-                buffer.delete(cursor)   
+                line = buffer[cursor.row]
+                text_before = line[:cursor.col]
+                if text_before and text_before.isspace() and len(text_before) >= INDENT_WIDTH:
+                    # Delete back to previous indent level
+                    remove = len(text_before) % INDENT_WIDTH or INDENT_WIDTH
+                    for _ in range(remove):
+                        left(window, buffer, cursor)
+                        buffer.delete(cursor)
+                else:
+                    left(window, buffer, cursor)
+                    buffer.delete(cursor)
                 state.modified = True
+
         elif k in ("(", "[", "{", '"', "'"):
             if not state._insert_snapshot_saved:
                 save_snapshot(buffer, cursor, tab)
@@ -438,20 +452,20 @@ def handle_keypress(k, stdscr, window, buffer, cursor, filename, state, terminal
                 cursor._clamp_col(buffer)
                 window.up(cursor)
         elif k == "w":
-            from vim_motions import motion_w
+            from modes.vim_motions import motion_w
             motion_w(buffer, cursor, window)
         elif k == "b":
-            from vim_motions import motion_b
+            from modes.vim_motions import motion_b
             motion_b(buffer, cursor, window)
         elif k == "0":
             cursor.col = 0
         elif k == "$":
             cursor.col = max(len(buffer[cursor.row]) - 1, 0)
         elif k == "^":
-            from vim_motions import motion_caret
+            from modes.vim_motions import motion_caret
             motion_caret(buffer, cursor, window)
         elif k == "G":
-            from vim_motions import motion_G
+            from modes.vim_motions import motion_G
             motion_G(buffer, cursor, window)
         elif k == "g":
             pass
@@ -482,6 +496,7 @@ def handle_keypress(k, stdscr, window, buffer, cursor, filename, state, terminal
             state.modified = True
             state.mode = result
             state._insert_snapshot_saved = False
+            print("\033[6 q", end="", flush=True)
         elif k == ">":
             state.modified = visual_indent(buffer, cursor, visual_state, direction=1, tab=tab)
             state.mode = "normal"

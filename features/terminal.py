@@ -16,6 +16,7 @@ import curses
 import subprocess
 import os
 import time
+import select
 from config.keys import TERMINAL_HEIGHT, SUBPROCESS_TIMEOUT, KEY_ESCAPE
 from ui.display import safe_addstr
 
@@ -32,8 +33,9 @@ class InlineTerminal:
         self.height = TERMINAL_HEIGHT
         self.scroll_offset = 0
         self.cwd = os.getcwd()
-        self._running_proc = None  # for non-blocking execution
+        self._running_proc = None
         self._proc_start = 0
+        self._awaiting_input = False
 
     def update_animation(self):
         now = time.time()
@@ -75,54 +77,93 @@ class InlineTerminal:
 
         self.output_lines.append(f"$ {cmd}")
 
-        # Launch non-blocking process
+        # Launch process with stdin pipe for interactive input
         try:
             self._running_proc = subprocess.Popen(
                 cmd,
                 shell=True,
+                stdin=subprocess.PIPE,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 text=True,
                 cwd=self.cwd
             )
             self._proc_start = time.time()
+            
+            # Make stdout non-blocking so poll_process doesn't freeze
+            import fcntl
+            flags = fcntl.fcntl(self._running_proc.stdout, fcntl.F_GETFL)
+            fcntl.fcntl(self._running_proc.stdout, fcntl.F_SETFL, flags | os.O_NONBLOCK)
+            self._awaiting_input = False
         except Exception as e:
             self.output_lines.append(f"  [error: {str(e)}]")
             self._running_proc = None
 
         self.input_buffer = ""
-    # Check if a running process has finished, call from main loop
+
     def poll_process(self):
         if self._running_proc is None:
             return
 
+        # Read any available stdout without blocking
+        if self._running_proc.stdout:
+            try:
+                data = self._running_proc.stdout.read()
+                if data:
+                    for line in data.rstrip("\n").split("\n"):
+                        self.output_lines.append(f"  {line}")
+                    self._scroll_to_bottom()
+            except (BlockingIOError, IOError):
+                pass
+
+
         retcode = self._running_proc.poll()
 
-        # Check for timeout
+        # Still running — check if it's waiting for input
         if retcode is None:
             if time.time() - self._proc_start > SUBPROCESS_TIMEOUT:
                 self._running_proc.kill()
                 self._running_proc.wait()
                 self.output_lines.append(f"  [timed out after {SUBPROCESS_TIMEOUT}s]")
                 self._running_proc = None
+                self._awaiting_input = False
                 self._scroll_to_bottom()
+                return
+
+            # Check if process is blocked (no stdout ready, still alive)
+            self._awaiting_input = True
             return
 
-        # Process finished
-        stdout = self._running_proc.stdout.read()
-        stderr = self._running_proc.stderr.read()
+        # Process finished — read any remaining output
+        remaining_out = self._running_proc.stdout.read()
+        remaining_err = self._running_proc.stderr.read()
 
-        if stdout:
-            for line in stdout.rstrip("\n").split("\n"):
+        if remaining_out:
+            for line in remaining_out.rstrip("\n").split("\n"):
                 self.output_lines.append(f"  {line}")
-        if stderr:
-            for line in stderr.rstrip("\n").split("\n"):
+        if remaining_err:
+            for line in remaining_err.rstrip("\n").split("\n"):
                 self.output_lines.append(f"  {line}")
-        if retcode != 0 and not stderr:
+        if retcode != 0 and not remaining_err:
             self.output_lines.append(f"  [exit code: {retcode}]")
 
         self._running_proc = None
+        self._awaiting_input = False
         self._scroll_to_bottom()
+    
+    # Send user input to the running process's stdin
+    def send_input(self, text):
+        if self._running_proc and self._running_proc.stdin:
+            try:
+                self._running_proc.stdin.write(text + "\n")
+                self._running_proc.stdin.flush()
+               # self.output_lines.append(f"  {text}")
+                self._awaiting_input = False
+                self._scroll_to_bottom()
+            except (BrokenPipeError, OSError):
+                self.output_lines.append("  [process closed]")
+                self._running_proc = None
+                self._awaiting_input = False
 
     def _scroll_to_bottom(self):
         visible_rows = self.height - 2
@@ -162,18 +203,33 @@ class InlineTerminal:
         if k == KEY_ESCAPE:
             return "blur"
         elif k == "\n":
-            self.run_command(self.input_buffer)
+            if self._awaiting_input and self._running_proc:
+                self.send_input(self.input_buffer)
+                self.input_buffer = ""
+            else:
+                self.run_command(self.input_buffer)
         elif k in ("KEY_BACKSPACE", "\x7f"):
             if self.input_buffer:
                 self.input_buffer = self.input_buffer[:-1]
         elif k == "KEY_UP":
-            self.history_up()
+            if not self._awaiting_input:
+                self.history_up()
         elif k == "KEY_DOWN":
-            self.history_down()
+            if not self._awaiting_input:
+                self.history_down()
         elif k == "\x0e":  # Ctrl+N
             self.scroll_down()
         elif k == "\x10":  # Ctrl+P
             self.scroll_up()
+        elif k == "\x03":  # Ctrl+C
+            if self._running_proc:
+                self._running_proc.kill()
+                self._running_proc.wait()
+                self.output_lines.append("  [killed]")
+                self._running_proc = None
+                self._awaiting_input = False
+                self.input_buffer = ""
+                self._scroll_to_bottom()
         elif len(k) == 1 and k.isprintable():
             self.input_buffer += k
         return None
@@ -182,7 +238,7 @@ class InlineTerminal:
         if not self.visible:
             return
 
-        # Poll for finished process output
+        # Poll for output from running process
         self.poll_process()
         
         border = "_" * n_cols
@@ -204,9 +260,11 @@ class InlineTerminal:
         input_row = start_row + self.height - 1
         short_cwd = os.path.basename(self.cwd) or self.cwd
 
-        # Show running indicator if process is active
         if self._running_proc is not None:
-            prompt = f" {short_cwd} $ [running...]"
+            if self._awaiting_input:
+                prompt = f" >> {self.input_buffer}"
+            else:
+                prompt = f" {short_cwd} $ [running...]"
         else:
             prompt = f" {short_cwd} $ {self.input_buffer}"
         safe_addstr(stdscr, input_row, 0, prompt[:n_cols])

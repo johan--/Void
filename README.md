@@ -104,7 +104,8 @@ Ctrl+V ..... visual (block)
 n / N ...... next/prev match    j/k ........ navigate
 gt / gT .... next/prev tab      Enter ...... open / navigate
                                 h .......... go back a directory
-                                "." ........ show hidden files
+                                r .......... refresh file finder
+                               `.` ........ show hidden files (dots)
 COMMAND MODE (:)
 :w  :q  :wq  :q!  :e <file>  :tabnew <file>  :saveas <file>
 ```
@@ -112,20 +113,28 @@ COMMAND MODE (:)
 ## Project Structure
 
 ```
-void.py          Entry point, main loop, screen drawing, event dispatch
-buffer.py        Text buffer (line storage, insert, delete)
-keybinds.py      Key dispatch, EditorState, command mode, tab/file helpers
-vim_motions.py   Normal mode vim motions (hjkl, w, b, d, y, etc.)
-visual.py        Visual mode state + operations (delete, yank, change, indent)
-editing.py       Undo/redo system, auto-indent and snapshot management
-display.py       Syntax highlighting, tokenizer, line drawing, safe_addstr
-search.py        Search/Replace state + prompt
-terminal.py      Inline terminal panel (subprocess, history, draw)
-file_finder.py   File browser panel
-tab.py           Tab + TabManager (per-tab buffer/cursor/undo)
-splash.py        Animated splash screen and recent file tracking
-aesthetics.py    Floating HUD widget (mode label, clock, time-elapsed and filetype)
-keys.py          Named constants (keycodes, defaults, config values)
+Void/
+├── void.py              Entry point, main loop, screen drawing, event dispatch
+├── config/
+│   └── keys.py          Named constants (keycodes, defaults, config values)
+├── core/
+│   ├── buffer.py        Text buffer (line storage, insert, delete)
+│   ├── editing.py       Undo/redo system, auto-indent and snapshot management
+│   └── tab.py           Tab + TabManager (per-tab buffer/cursor/undo)
+├── modes/
+│   ├── keybinds.py      Key dispatch, EditorState, command mode, tab/file helpers
+│   ├── vim_motions.py   Normal mode vim motions (hjkl, w, b, d, y, etc.)
+│   ├── visual.py        Visual mode state + operations (delete, yank, change, indent)
+│   └── search.py        Search/Replace state + prompt
+├── ui/
+│   ├── display.py       Syntax highlighting, tokenizer, line drawing, safe_addstr
+│   ├── splash.py        Animated splash screen and recent file tracking
+│   └── aesthetics.py    Floating HUD widget (mode label, clock, time-elapsed and filetype)
+├── features/
+│   ├── terminal.py      Inline terminal panel (subprocess, history, draw)
+│   └── file_finder.py   File browser panel
+└── assets/
+    └── ...              Logo images and demo GIF
 ```
 
 ## The Road Ahead

@@ -214,8 +214,9 @@ When the file finder panel is focused (toggled with `Ctrl+F`):
 | `j` / `Down Arrow` | Move selection down |
 | `k` / `Up Arrow` | Move selection up |
 | `Enter` | Open the selected file in a new tab, or navigate into a directory |
-| `h` | Toggle visibility of hidden files (dotfiles) |
-| `r` | Refresh the file listing |
+| `.` | Toggle visibility of hidden files (dotfiles) |
+| `h` | Go back a directory |
+| `r` | Refresh file finder |
 
 ---
 
@@ -237,9 +238,9 @@ dd ......... delete line
 dw d$ d0 ... delete motion      FILE FINDER (Ctrl+F)
 dG / dgg ... delete to end/top  j/k ........ navigate
 yy ......... yank line          Enter ...... open / navigate
-p / P ...... paste after/before h .......... toggle hidden
-u .......... undo               r .......... refresh
-Ctrl+R ..... redo
+p / P ...... paste after/before h .......... go back a directory
+u .......... undo               r .......... refresh file finder
+Ctrl+R ..... redo              `.`.......... reveal hidden files
 / .......... search             COMMAND MODE (:)
 n / N ...... next/prev match    :w  :q  :wq  :q!
 gt / gT .... next/prev tab      :e  :tabnew  :tabn  :tabp
