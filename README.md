@@ -64,30 +64,26 @@ That being said -- it works. You can open files, edit them, save them, search th
 
 ### From source
 ```bash
-```
 git clone https://github.com/cryybash/Void.git
 cd Void
-```
 ```
 
 
 Then install with any of:
 ```bash
-```
 uv tool install .     # recommended
 pipx install .        # alternative
 pip install .         # if you don't have uv or pipx
 ```
-```
+
 
 
 ### Usage
 ```bash
-```
 void               # Open with splash screen 
 void myfile.py     # Open specific file type/extension 
 ```
-```
+
 
 
 ## Keybinds
