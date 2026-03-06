@@ -15,6 +15,7 @@
 
 import curses
 import argparse
+
 from config.settings import settings
 from core.buffer import Buffer
 from modes.keybinds import handle_keypress, EditorState, open_file_in_tab
@@ -26,7 +27,7 @@ from modes.search import search_state
 from ui.splash import SplashScreen
 from modes.visual import visual_state
 from ui.aesthetics import hud, init_hud_colors
-from config.keys import NEW_FILE_NAME
+from config.keys import NEW_FILE_NAME, SCROLL_MARGIN
 from ui.display import (init_colors, line_num_width, draw_line_number,
                      draw_line, draw_indent_guides, draw_tab_bar, draw_status_bar,
                      draw_search_highlights, draw_matching_pair, draw_visual_selection)
@@ -130,14 +131,17 @@ def draw_editor(stdscr, buffer, window, cursor, tab_manager, terminal, file_find
     
     draw_tab_bar(stdscr, tab_manager, window.n_cols + 1)
     editor_rows = terminal.get_editor_rows(window.n_rows)
-    ln_width = line_num_width(buffer)
+    ln_width = line_num_width(buffer) if settings["show_line_numbers"] else 0
      
     for row, line in enumerate(buffer[window.row:window.row + editor_rows]):
         screen_row = row + 1
         line_number = window.row + row + 1
         display_line = line[window.col:] if window.col < len(line) else ""
         is_cursor_line = (window.row + row == cursor.row)
-        draw_line_number(stdscr, screen_row, line_number, ln_width)
+        
+        if settings["show_line_numbers"]:
+            draw_line_number(stdscr, screen_row, line_number, ln_width)
+        
         bg = curses.A_BOLD if is_cursor_line else None           
         draw_line(stdscr, screen_row, ln_width, display_line, lang, window.n_cols, bg)
 
@@ -289,7 +293,7 @@ def main(stdscr):
                                file_finder, state, search_state, visual_state, hud)
         
         # Wire up gutter for scroll
-        window.horizontal_scroll(cursor, gutter=ln_width)
+        window.horizontal_scroll(cursor, gutter=ln_width, margin=SCROLL_MARGIN)
 
         stdscr.timeout(100)
         try:

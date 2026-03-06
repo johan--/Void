@@ -56,7 +56,7 @@ class SplashScreen:
         try:
             with open(RECENT_FILES_PATH) as f:
                 files = json.load(f)
-            return [f for f in files if os.path.exists(f)][:8]
+            return [f for f in files if os.path.exists(f)][:settings["max_recent_display"]]
         except (FileNotFoundError, json.JSONDecodeError):
             return []
 
@@ -72,7 +72,7 @@ class SplashScreen:
         if filepath in files:
             files.remove(filepath)
         files.insert(0, filepath)
-        files = files[:20]
+        files = files[:settings["max_recent_files"]]
 
         with open(RECENT_FILES_PATH, "w") as f:
             json.dump(files, f)

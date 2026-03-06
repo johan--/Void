@@ -31,6 +31,7 @@ KEY_ENTER = "\n"
 KEY_BACKSPACE_CODES = ("KEY_BACKSPACE", "\x7f")
 KEY_DELETE_CODES = ("KEY_DC", KEY_CTRL_D)
 
+
 # Editor defaults loading from ~/.config/void/config.json
 INDENT_WIDTH = settings["indent_width"]
 INDENT_STR = " " * INDENT_WIDTH
@@ -38,6 +39,9 @@ MAX_UNDO = settings["max_undo"]
 TERMINAL_HEIGHT = settings["terminal_height"]
 FILE_FINDER_WIDTH = settings["file_finder_width"]
 SUBPROCESS_TIMEOUT = settings["subprocess_timeout"]
+SCROLL_MARGIN = settings["scroll_margin"]
+TAB_WIDTH = settings["tab_width"]
+
 
 # Placeholder filenames
 NEW_FILE_NAME = "[new]"

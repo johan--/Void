@@ -28,6 +28,14 @@ DEFAULTS = {
     "show_indent_guides": True,
     "show_hud": True,
     "splash_animation": True,
+    "scroll_margin": 5,
+    "show_line_numbers": True,
+    "tab_width": 4,
+    "max_recent_files": 20,
+    "max_recent_display": 8,
+    "auto_indent": True,
+    "auto_pair": True,
+    "trailing_newline": True,
 }
 
 
